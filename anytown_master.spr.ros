@@ -1,0 +1,51 @@
+
+ Trying to delete previous logfile anytown_master.spr.ros... file successfully deleted.
+
+ Building system... ready.
+
+ Automatic inicialization...
+	nodal pressures:	50 mwc 
+	edge mass flow rates:	1 kg/s ...
+
+Solving system...
+====================================
+
+ iter. # 0./100 e_mp=1.37e+02,  e_p=2.19e+02  relax.=1.00, relax.mul.=1.20 (2)
+ iter. # 1./100 e_mp=7.11e-14,  e_p=1.26e+02  relax.=1.00, relax.mul.=1.20 (2)
+ iter. # 2./100 e_mp=4.57e-14,  e_p=6.56e+01  relax.=1.00, relax.mul.=1.20 (2)
+ iter. # 3./100 e_mp=7.17e-14,  e_p=1.08e+01  relax.=1.00, relax.mul.=1.20 (2)
+ iter. # 4./100 e_mp=3.39e-14,  e_p=2.59e-01  relax.=1.00, relax.mul.=1.20 (2)
+ iter. # 5./100 e_mp=2.48e-14,  e_p=1.01e-02  relax.=1.00, relax.mul.=1.20 (2)
+ iter. # 6./100 e_mp=2.42e-14,  e_p=8.18e-04  relax.=1.00, relax.mul.=1.20 (2)
+
+OK
+
+Computing residence time...
+====================================
+
+	 step #9 max. res. time: 14 d, 0 h, 0 m (PIPE203), mean: 1 d, 4 h, 10 m
+Finished computing residence time.
+
+Saving results...done
+
+
+Statistics:
+======================
+	 # of nodes : 48
+	 # of edges : 26
+
+	 diameter     : min : 0.15m (ID: POOL62) max : 1.01m (ID: PIPE116)
+	 length       : min : 10.00m (ID: PIPE74)  max : 3657.60m (ID: PIPE226)
+	 sum. length  : 81483.04 m 
+	 pipe volume  : 6500.14 m^3 
+	 fluid volume : 6500.12 m^3 (100.00% of pipe volume)
+
+	 max. inflow          : -0.00 m3/h (ID: NODE82)  
+	 max. consumption     : 227.10 m3/h (ID: NODE64)  
+	 sum of inflow        : 0.00 m3/h
+	 sum of consumption   : 1998.48 m3/h
+	 consumption - inflow : 1998.48 m3/h
+
+	 node geodetic height : min : 0.00m (ID: NODE184)  max : 36.58m (ID: NODE210)
+
+ 	 number of nonzero Jacobian entries: 234 out of 5476 (4.27%)

@@ -1,0 +1,192 @@
+import xml.etree.ElementTree as ET
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+import os
+import subprocess
+import random
+
+
+def read_performance_curves(pathToDefinitionFile):
+    tree = ET.parse(pathToDefinitionFile)
+    root = tree.getroot()
+
+    dict_pumps = {}
+
+    for child in root:
+        for edge in child.findall('edge'):
+            id_edge = edge.find('id').text.strip()
+            if id_edge[:4] == 'PUMP':
+                #print('\n%s found' % id_edge)
+                volume_flow_rate = float(edge.find('volume_flow_rate').text.strip())
+                headloss = float(edge.find('headloss').text.strip())
+                #print("volume_flow_rate is %s \nheadloss is %s" % (volume_flow_rate,headloss))
+                points = edge.find('edge_spec').find('pump').find('curve').find('points')
+                Q_points = []
+                H_points = []
+                P_points = []
+                for point in points:
+                    if point.tag == 'point_x':
+                        value = float(point.text.strip())
+                        Q_points.append(value)
+                    elif point.tag == 'point_y':
+                        value = float(point.text.strip())
+                        H_points.append(value)
+                    elif point.tag == 'point_z':
+                        value = float(point.text.strip())
+                        P_points.append(value)
+
+                dict_pumps[id_edge] = {'volume_flow_rate' : volume_flow_rate, 'headloss' : headloss,
+                                        'Q_points' : Q_points, 'H_points' : H_points, 'P_points' : P_points}
+
+    return(dict_pumps)
+
+
+def read_nodes_pressure(pathToDefinitionFile):
+    tree = ET.parse(pathToDefinitionFile)
+    root = tree.getroot()
+
+    list_pressure = []
+
+    for child in root:
+        for edge in child.findall('node'):
+            id_node = edge.find('id').text.strip()
+            if id_node[:4] == 'NODE':
+                #print('\n%s found' % id_edge)
+                pressure = float(edge.find('pressure').text.strip())
+
+                list_pressure.append(pressure)
+
+    return(list_pressure)
+
+
+
+def write_performance_curve(pumpId, original_path, pathToDefinitionFile, dict_pumps):
+    tree = ET.parse(original_path)
+    root = tree.getroot()
+
+    for child in root:
+        for edge in child.findall('edge'):
+            id_edge = edge.find('id').text.strip()
+            if id_edge == pumpId:
+                #print('\n%s found' % id_edge)
+                points = edge.find('edge_spec').find('pump').find('curve').find('points')
+                Q_points = dict_pumps[pumpId]['Q_points']
+                H_points = dict_pumps[pumpId]['H_points']
+                P_points = dict_pumps[pumpId]['P_points']
+                #print(points.text)
+                for i in range(len(points)):
+                    point = points[i]
+                    j = int(i/3)
+                    if point.tag == 'point_x':
+                        point.text = str(Q_points[j])
+                    elif point.tag == 'point_y':
+                        point.text = str(H_points[j])
+                    elif point.tag == 'point_z':
+                        point.text = str(P_points[j])
+
+    tree.write(pathToDefinitionFile, encoding='utf8')
+
+
+def randomize_demand(pathToDefinitionFile):
+    tree = ET.parse('anytown_master.spr')
+    root = tree.getroot()
+
+    total_demand = 0 #2000 scale every demand to sum(demand) = 2000
+
+    for child in root:
+        for node in child.findall('node'):
+            demand = node.find('demand')
+            #print(demand.text)
+            new_demand = str(round(random.random()*200, 2))
+            demand.text = new_demand
+            #print(demand.text)
+
+    tree.write(pathToDefinitionFile, encoding='utf8')
+
+
+
+def apply_affinity_laws(pumpIds,dict_pumps,speed_ratio):
+    counter = 0
+    for j in pumpIds :
+        list_Q = [i * speed_ratio[counter] for i in dict_pumps[j]['Q_points']]
+        list_H = [i * (speed_ratio[counter]**2) for i in dict_pumps[j]['H_points']]
+        list_P = [i * (speed_ratio[counter]**3) for i in dict_pumps[j]['P_points']]
+        dict_pumps[j]['Q_points'] = list_Q
+        dict_pumps[j]['H_points'] = list_H
+        dict_pumps[j]['P_points'] = list_P
+        counter +=1
+    return dict_pumps
+
+
+def plot_curves(pumpId, dict_pumps): #Just for graphical view
+    Q_points = dict_pumps[pumpId]['Q_points']
+    H_points = dict_pumps[pumpId]['H_points']
+    P_points = dict_pumps[pumpId]['P_points']
+
+    plt.style.use('ggplot')
+    ax = plt.gca()
+    labels = ax.get_xticklabels()
+    plt.setp(labels, rotation=20, horizontalalignment='right')
+    line1, = plt.plot(Q_points, H_points, '-o', label=("Head"), linewidth=2)
+    line2, = plt.plot(Q_points, P_points, '-o', label=("Power"), linewidth=2)
+    first_legend = plt.legend(handles=[line1, line2], loc=2)
+    plt.xlabel('Q')
+    plt.title("Performance curves of %s" % pumpId)
+    P_function = polyfit_curves(pumpId, dict_pumps)
+    plt.show()
+    return(P_function)
+
+
+def polyfit_curves(pumpId, dict_pumps):
+    '''x = np.linspace(0, 1400, 500, endpoint = True)
+    p = np.polyfit(dict_pumps[pumpId]['Q_points'], dict_pumps[pumpId]['H_points'], 2) #2nd
+    H_function = np.poly1d(p)
+    plt.plot(x, H_function(x))'''
+    p = np.polyfit(dict_pumps[pumpId]['Q_points'], dict_pumps[pumpId]['P_points'], 3) #2nd 3rd
+    P_function = np.poly1d(p)
+    #plt.plot(x, P_function(x))
+    return(P_function)
+
+def launch_staci(pathToDefinitionFile): #Launch Staci on Linux
+    FNULL = open(os.devnull, 'w')
+    proc=subprocess.Popen(['./staci.exe','-s', pathToDefinitionFile], stdout=FNULL, stderr=subprocess.STDOUT)  
+    proc.communicate()
+
+def get_pump_efficiencies(Q,P,H):
+    eff = Q*1000*9.81*H/(3600*P*10**3)
+    return(eff)
+
+
+'''
+start_time = time.time()    
+
+pathToDefinitionFile = 'anytown_master.spr'
+print(len(read_nodes_pressure(pathToDefinitionFile)))
+
+
+performanceCurves = read_performance_curves(pathToDefinitionFile)
+
+pumpId, dict_pumps = 'PUMP71', performanceCurves
+
+Q_star = dict_pumps['PUMP71']['volume_flow_rate']
+headloss = dict_pumps['PUMP71']['headloss']
+
+P_function = polyfit_curves(pumpId, dict_pumps)
+
+P_star = P_function(Q_star)
+
+efficiency = get_pump_efficiencies(Q_star,P_star,headloss)
+
+end_time1 = time.time()
+
+
+
+print(Q_star,P_star,headloss)
+print(efficiency)
+
+#write_performance_curve(pumpId, pathToDefinitionFile, dict_pumps)
+
+#launch_staci()
+
+print('It took %s seconds' % str(end_time1 - start_time))'''
